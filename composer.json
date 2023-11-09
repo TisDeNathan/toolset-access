@@ -1,0 +1,8 @@
+{
+  "name": "makewavesbe/toolset-access",
+  "description": "Toolset access package for Vitri",
+  "type": "wordpress-plugin",
+  "require": {
+    "composer/installers": "^v2.2"
+  }
+} 
