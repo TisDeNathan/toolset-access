@@ -6,6 +6,7 @@ use OTGS\Toolset\Access\Models\Capabilities;
 use OTGS\Toolset\Access\Models\Settings;
 use OTGS\Toolset\Access\Models\UserRoles;
 use OTGS\Toolset\Access\Models\WPMLSettings;
+use OTGS\Toolset\Access\Utils;
 use Toolset_Post_Type_Exclude_List;
 
 /**
@@ -124,27 +125,47 @@ class PermissionsPostTypes {
 		add_action( 'registered_post_type', array( $this, 'registered_post_type_hook' ), 10, 2 );
 	}
 
+	/**
+	 * Given a post type and its capability type, define the
+	 * capability type that it would jhave if it were managed by Access.
+	 *
+	 * Note that the capability type should match the post type,
+	 * since that is the piece of info used in the settings table.
+	 *
+	 * In previous versions, we generated an array for singular/plural values,
+	 * crafted after the singular and plural labels (!!"??),
+	 * but that causes maaaany problems on non-english sites,
+	 * and generates wrong permissions when the labels and slugs for a post type
+	 * do not match at all.
+	 *
+	 * @param  string $original_capability_type
+	 * @param  string $post_type
+	 *
+	 * @return string
+	 */
+	private function get_capability_type( $original_capability_type, $post_type ) {
+		if (
+			'post' === $original_capability_type
+			&& 'post' !== $post_type
+		) {
+			return $post_type;
+		}
+
+		return $original_capability_type;
+	}
+
 
 	/**
 	 * Generate a clone of post type object.
 	 *
 	 * @param string $post_type
-	 * @param string $singular
-	 * @param string $plural
 	 *
 	 * @return \WP_Post_Type
 	 */
-	private function generate_temp_post_type_object( $post_type, $singular, $plural ) {
+	private function generate_temp_post_type_object( $post_type ) {
 		global $wp_post_types;
 		$tmp_post_type_object = clone $wp_post_types[ $post_type ];
-		if (
-			'post' === $tmp_post_type_object->capability_type
-			&& 'post' !== $post_type
-		) {
-			// Post types (especially CPTs defined in 3rd parties) might provide their owun capability_type:
-			// we should respect it
-			$tmp_post_type_object->capability_type = array( $singular, $plural );
-		}
+		$tmp_post_type_object->capability_type = $this->get_capability_type( $tmp_post_type_object->capability_type, $post_type );
 		$tmp_post_type_object->map_meta_cap = true;
 		$tmp_post_type_object->capabilities = array();
 		$tmp_post_type_object->cap = get_post_type_capabilities( $tmp_post_type_object );
@@ -235,8 +256,6 @@ class PermissionsPostTypes {
 		$access_settings = $access_settings ? $access_settings : Settings::get_instance();
 		$settings_access = $access_settings->get_types_settings();
 
-		$tmp_post_type_object = $this->generate_temp_post_type_object( $post_type, $singular, $plural );
-
 		$is_post_managed = ( isset( $settings_access['post'] ) && $settings_access['post']['mode'] == 'permissions' );
 		$this->fix_menu_position_for_child_post_types( $is_post_managed, $post_type );
 
@@ -250,16 +269,25 @@ class PermissionsPostTypes {
 			$settings_access[ $post_type ]['mode'] = 'not_managed';
 		}
 
-		$wp_post_types[ $post_type ]->__accessIsCapValid = ! $access_capabilities->check_cap_conflict( array_values( (array) $tmp_post_type_object->cap ) );
-		$wp_post_types[ $post_type ]->__accessIsNameValid = isset( $tmp_post_type_object->labels );
-		$wp_post_types[ $post_type ]->__accessNewCaps = $tmp_post_type_object->cap;
 		$this->detect_inherits_post_types( $post_type );
 
 		$custom_post_mode = $settings_access[ $post_type ]['mode'];
 
+		if ( 'not_managed' === $custom_post_mode ) {
+			if ( $wpcf_access->wpml_installed ) {
+				WPMLSettings::get_instance()->load_wpml_languages_permissions( $access_settings, $post_type );
+			}
+			return;
+		}
+
+		$tmp_post_type_object = $this->generate_temp_post_type_object( $post_type );
+
+		$wp_post_types[ $post_type ]->__accessIsCapValid = ! $access_capabilities->check_cap_conflict( array_values( (array) $tmp_post_type_object->cap ) );
+		$wp_post_types[ $post_type ]->__accessIsNameValid = isset( $tmp_post_type_object->labels );
+		$wp_post_types[ $post_type ]->__accessNewCaps = $tmp_post_type_object->cap;
+
 		if (
-			'not_managed' === $custom_post_mode
-			|| ! $wp_post_types[ $post_type ]->__accessIsCapValid
+			! $wp_post_types[ $post_type ]->__accessIsCapValid
 			|| ! $wp_post_types[ $post_type ]->__accessIsNameValid
 		) {
 			if ( $wpcf_access->wpml_installed ) {
@@ -269,7 +297,7 @@ class PermissionsPostTypes {
 		}
 
 		if ( 'follow' !== $custom_post_mode ) {
-			$wp_post_types[ $post_type ]->capability_type = array( $singular, $plural );
+			$wp_post_types[ $post_type ]->capability_type = $this->get_capability_type( $wp_post_types[ $post_type ]->capability_type, $post_type );
 			$wp_post_types[ $post_type ]->map_meta_cap = true;
 			$wp_post_types[ $post_type ]->capabilities = array();
 			$wp_post_types[ $post_type ]->cap = get_post_type_capabilities( $wp_post_types[ $post_type ] );
@@ -293,10 +321,11 @@ class PermissionsPostTypes {
 	 */
 	public function get_post_type_caps( $allcaps, $caps, $args, $user, $type ) {
 		global $wpcf_access;
-		$settings = Settings::get_instance();
-		$access_roles = UserRoles::get_instance();
+		$settings             = Settings::get_instance();
+		$access_roles         = UserRoles::get_instance();
 		$requested_capability = $args[0];
-		$is_edit_comment = ( 'edit_comment' == $args[0] );
+		$is_edit_comment      = ( 'edit_comment' == $args[0] );
+		$postId               = Utils::getObjectIdFromCapabilitiesArguments( $args );
 		if ( ! $is_edit_comment ) {
 			if ( 'delete' === $type ) {
 				$requested_capability = $caps[0];
@@ -315,14 +344,14 @@ class PermissionsPostTypes {
 
 			}
 
-			if ( isset( $args[2] ) && ! empty( $args[2] ) ) {
-				$new_post_type = $settings->determine_post_type( $args[2] );
+			if ( $postId ) {
+				$new_post_type = $settings->determine_post_type( $postId );
 				$post_type = ( empty( $new_post_type ) ? $post_type : $new_post_type );
 			}
 		} else {
-			if ( isset( $args[2] ) ) {
+			if ( $postId ) {
 				$comments_permissions = CommentsPermissions::get_instance();
-				$post = $comments_permissions->get_comment_post( $args[2] );
+				$post = $comments_permissions->get_comment_post( $postId );
 				if ( empty( $post ) ) {
 					return $allcaps;
 				}
@@ -382,12 +411,11 @@ class PermissionsPostTypes {
 		// Post group edit permissions for single post
 		// Has highest priority
 		if ( $post_group_permissions->post_groups_exists ) {
-			if ( isset( $args[2] ) || ! empty( $args[2] ) ) {
-				$post_id = intval( $args[2] );
+			if ( $postId ) {
 				foreach ( $post_group_permissions->post_groups_ids as $group_name => $group_info ) {
-					if ( isset( $group_info[ $post_id ] )
+					if ( isset( $group_info[ $postId ] )
 						&& isset( $post_group_permissions->post_groups_settings[ $group_name ] ) ) {
-						return $post_group_permissions->set_permissions_post_groups( $allcaps, $group_name, $user, $post_type_array, $roles, $post_id );
+						return $post_group_permissions->set_permissions_post_groups( $allcaps, $group_name, $user, $post_type_array, $roles, $postId );
 					}
 				}
 				$allcaps = $post_group_permissions->set_post_group_permissions_to_defaults( $allcaps, $user, $post_type_array );
@@ -419,7 +447,7 @@ class PermissionsPostTypes {
 
 		// Make post type menu visible if a user has edit permissions for at least one post
 		if ( $post_group_permissions->post_groups_exists ) {
-			if ( ! isset( $args[2] ) || empty( $args[2] ) ) {
+			if ( ! $postId ) {
 				if ( $post_group_permissions->user_can_edit_single_post( $post_type_array, $user, $roles ) ) {
 					$requested_post_type = $post_type_array['post_type'];
 					if ( ! isset( $allcaps[ 'edit_' . $requested_post_type ] )
@@ -451,10 +479,11 @@ class PermissionsPostTypes {
 	 */
 	public function set_post_type_permissions( $allcaps, $user, $types_settings, $post_type, $roles, $args, $access_capabilities = null ) {
 		$access_capabilities = $access_capabilities ?: Capabilities::get_instance();
+		$postId              = Utils::getObjectIdFromCapabilitiesArguments( $args );
 
 		$additional_key = '';
-		if ( isset( $args[2] ) && ! empty( $args[2] ) ) {
-			$additional_key = 'edit_own' . $args[2];
+		if ( $postId ) {
+			$additional_key = 'edit_own' . $postId;
 		}
 		$access_cache_post_type_caps_key_single = md5( 'access::post_ype_language_cap__single_'
 			. $post_type['post_type_slug']
@@ -725,6 +754,7 @@ class PermissionsPostTypes {
 	 * Defines capabilities.
 	 *
 	 * @return array
+	 * @deprecated Apparently we never call this. Also, see OTGS\Toolset\Access\Models\Capabilities::types_caps_array().
 	 */
 	public function get_types_caps_array() {
 		$access_roles = UserRoles::get_instance();

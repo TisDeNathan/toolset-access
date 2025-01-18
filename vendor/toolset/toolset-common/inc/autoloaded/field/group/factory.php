@@ -131,7 +131,7 @@ abstract class Toolset_Field_Group_Factory {
 		$fg_post = null;
 
 		// when $force_query_by_name is not used, check if a post id is given
-		if ( ! $force_query_by_name && ( ctype_digit( $field_group ) || is_int( $field_group ) ) && (int) $field_group > 0 ) {
+		if ( ! $force_query_by_name && !is_object( $field_group ) && ( ctype_digit( $field_group ) || is_int( $field_group ) ) && (int) $field_group > 0 ) {
 			// query by post id
 			$fg_post = $this->wp_post_factory->load( $field_group );
 		} else if ( $fg_post = $this->get_field_group_by_name( $field_group ) ) {

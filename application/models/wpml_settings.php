@@ -5,6 +5,7 @@ namespace OTGS\Toolset\Access\Models;
 use OTGS\Toolset\Access\Controllers\CustomErrors;
 use OTGS\Toolset\Access\Controllers\PermissionsPostGroups;
 use OTGS\Toolset\Access\Controllers\PermissionsPostTypes;
+use OTGS\Toolset\Access\Utils;
 
 /**
  * WPML Permissions class
@@ -528,9 +529,10 @@ class WPMLSettings {
 	 * @return array
 	 */
 	public function set_post_type_permissions_wpml( $allcaps, $args, $caps, $user, $types_settings, $post_type, $roles ) {
-		$access_capabilities = Capabilities::get_instance();
-		$access_settings = Settings::get_instance();
+		$access_capabilities         = Capabilities::get_instance();
+		$access_settings             = Settings::get_instance();
 		$post_type_permissions_class = PermissionsPostTypes::get_instance();
+		$postId                      = Utils::getObjectIdFromCapabilitiesArguments( $args );
 
 		$requested_capabilties = array(
 			'edit_any' => true,
@@ -552,12 +554,13 @@ class WPMLSettings {
 		$post_type_cap = $post_type['post_type'];
 
 
-		if ( isset( $args[2] ) ) {
-			$post_id = $args[2];
+		if ( $postId ) {
+			// TODO This is legacy logic, might be broken and might not need an ALT ID, or might need to propagate it as just $postId.
+			$postIdAlt = $postId;
 			if ( isset( $args[3] ) && is_object( $args[3] ) && isset( $args[3]->ID ) ) {
-				$post_id = $args[3]->ID;
+				$postIdAlt = $args[3]->ID;
 			}
-			$post_language = $this->get_language_by_post_id( $post_id );
+			$post_language = $this->get_language_by_post_id( $postIdAlt );
 			if ( is_object( $post_language ) ) {
 				$post_language = $access_settings->object_to_array( $post_language );
 			}
@@ -581,8 +584,8 @@ class WPMLSettings {
 		}
 
 		$additional_key = '';
-		if ( isset( $args[2] ) && ! empty( $args[2] ) ) {
-			$additional_key = 'edit_own' . $args[2];
+		if ( $postId ) {
+			$additional_key = 'edit_own' . $postId;
 		}
 		$access_cache_posttype_languages_caps_key_single = md5( 'access::postype_language_cap_single_'
 			. $post_type_cap
@@ -600,11 +603,11 @@ class WPMLSettings {
 			$post_type_permissions = $types_settings[ $post_type['post_type_slug'] ];
 			$post_type_permissions = $post_type_permissions[ $post_language ];
 			$parsed_caps = $post_type_permissions_class->parse_post_type_caps( $post_type_permissions, $requested_capabilties, $roles );
-			if ( ! isset( $args[2] ) || empty( $args[2] ) ) {
+			if ( ! $postId ) {
 				$this->disable_add_new_button_wpml( $parsed_caps, $post_language, $post_type, $user );
 			}
 			// Enable post type menu if a user has no edit permissions for default language
-			if ( ! $parsed_caps['edit_own'] && ( ! isset( $args[2] ) || empty( $args[2] ) ) ) {
+			if ( ! $parsed_caps['edit_own'] && ( ! $postId ) ) {
 				foreach ( $types_settings[ $post_type['post_type_slug'] ] as $lang => $lang_data ) {
 					if ( $lang != $post_language ) {
 						if ( ! $parsed_caps['edit_own'] ) {

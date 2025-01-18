@@ -271,7 +271,7 @@ class BackendFilters {
 			return;
 		}
 		$user_id = intval( $_POST['user_id'] );// phpcs:ignore
-		if ( ! IS_PROFILE_PAGE && ! is_network_admin() && current_user_can( 'promote_user', $user_id ) ) {
+		if ( defined( 'IS_PROFILE_PAGE' ) && ! IS_PROFILE_PAGE && ! is_network_admin() && current_user_can( 'promote_user', $user_id ) ) {
 			$edit_profile_class = EditProfile::get_instance();
 			$edit_profile_class->save_user_roles();
 		}
@@ -505,8 +505,8 @@ class BackendFilters {
 	 * @param array $caps [0] Required capability.
 	 * @param array $args [0] Requested capability
 	 *                            [1] User ID
-	 *                            [2] Associated object ID.
-	 * @param object $user The user ti check capabilities against, added in WP 3.7.0.
+	 *                            [2] Typically, associated object ID. Optional.
+	 * @param object $user The user to check capabilities against, added in WP 3.7.0.
 	 *
 	 * @return array
 	 */

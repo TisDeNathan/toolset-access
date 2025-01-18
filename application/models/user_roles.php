@@ -225,30 +225,6 @@ class UserRoles {
 
 
 	/**
-	 * Get all capabilities array
-	 *
-	 * @param array $managed_caps
-	 * @return array
-	 */
-	public function get_roles_capabilities_list( $managed_caps ) {
-		global $wp_roles;
-		$capabilities_list = array();
-		foreach ( $wp_roles->roles as $role => $role_info ) {
-			$role_caps = $role_info['capabilities'];
-			foreach ( $role_caps as $cap => $cap_status ) {
-				if ( $cap_status == 1
-					&& in_array( $cap, $capabilities_list ) === false
-					&& in_array( $cap, $managed_caps ) === false ) {
-					$capabilities_list[] = $cap;
-				}
-			}
-		}
-
-		return $capabilities_list;
-	}
-
-
-	/**
 	 * Maps role to level.
 	 *
 	 * @param string $role

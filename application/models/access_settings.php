@@ -28,6 +28,8 @@ class Settings {
 
 	private $main_role;
 
+	private $guest_role;
+
 	/**
 	 * @return Settings
 	 */
@@ -729,6 +731,17 @@ class Settings {
 		return array( $group1, $group2, $group3, $group4, $group5, $group6, $group7 );
 	}
 
+	private function get_guest_wp_role() {
+		if ( null === $this->guest_role ) {
+			$this->guest_role = array(
+				'name'              => __( 'Guest', 'wpcf-access' ),
+				'permissions_group' => 6,
+				'capabilities'      => array( 'read' => 1 ),
+			);
+		}
+		return $this->guest_role;
+	}
+
 	/**
 	 * @since 2.2
 	 * Order wp_roles array
@@ -740,7 +753,6 @@ class Settings {
 	 * @return array
 	 */
 	public function get_ordered_wp_roles( $invalidate = false, $groups_array = false ) {
-
 		$ordered_roles = \Access_Cacher::get( 'toolset_access_ordered_roles_' . $groups_array );
 		if ( false === $ordered_roles || $invalidate = true ) {
 			global $wp_roles;
@@ -756,11 +768,7 @@ class Settings {
 				$ordered_roles = array( $group1, $group2, $group3, $group4, $group5, $group6, $group7 );
 			} else {
 				$ordered_roles          = array_merge( $group1, $group2, $group3, $group4, $group5, $group6, $group7 );
-				$ordered_roles['guest'] = array(
-					'name'              => __( 'Guest', 'wpcf-access' ),
-					'permissions_group' => 6,
-					'capabilities'      => array( 'read' => 1 ),
-				);
+				$ordered_roles['guest'] = $this->get_guest_wp_role();
 			}
 			\Access_Cacher::set( 'toolset_access_ordered_roles_' . $groups_array, $ordered_roles );
 		}

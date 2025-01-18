@@ -47,6 +47,20 @@ class Capabilities {
 	 */
 	private $access_roles;
 
+	/** @var array */
+	private $default_post_capabilities = array(
+		'create_posts',
+		'edit_posts',
+		'edit_published_posts',
+		'edit_others_posts',
+		'edit_private_posts',
+		'publish_posts',
+		'read_private_posts',
+		'delete_posts',
+		'delete_private_posts',
+		'delete_published_posts',
+		'delete_others_posts'
+	);
 
 	/**
 	 * @return Capabilities
@@ -461,7 +475,7 @@ class Capabilities {
 			|| strpos( $cap, 'modify_fields_in_' ) !== false
 			|| strpos( $cap, 'assign_' ) !== false
 			|| strpos( $cap, 'read_private' ) !== false
-		     || strpos( $requested_cap, 'read_private' ) !== false
+			|| strpos( $requested_cap, 'read_private' ) !== false
 			|| 'upload_files' == $cap
 			|| 'moderate_comments' == $cap ) {
 			return true;
@@ -832,6 +846,62 @@ class Capabilities {
 		}
 
 		return false;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function get_list( $managed_caps = array() ) {
+		global $wp_roles;
+		$capabilities_list = array();
+		foreach ( $wp_roles->roles as $role => $role_info ) {
+			$role_caps = $role_info['capabilities'];
+			foreach ( $role_caps as $cap => $cap_status ) {
+				if ( $cap_status == 1
+					&& in_array( $cap, $capabilities_list ) === false
+					&& in_array( $cap, $managed_caps ) === false ) {
+					$capabilities_list[] = $cap;
+				}
+			}
+		}
+
+		$all_post_type_objects = get_post_types( array(), 'objects' );
+		$all_post_types        = get_post_types();
+		$internal_post_types   = get_post_types(
+			array(
+				'public'   => false,
+				'_builtin' => true,
+			)
+		);
+		$relevant_post_types = array_diff( $all_post_types, $internal_post_types );
+		$native_post_types   = array( 'post', 'page' );
+		foreach( $all_post_type_objects as $post_type ) {
+			if ( ! isset( $relevant_post_types[ $post_type->name ] ) ) {
+                continue;
+            }
+            if ( in_array( $post_type->name, $native_post_types ) ) {
+                continue;
+            }
+            if ( ! isset( $post_type->cap ) ) {
+                continue;
+            }
+			if (
+				isset( $post_type->capability_type )
+				&& in_array( $post_type->capability_type, array( 'post', 'page' ), true )
+			) {
+				continue;
+			}
+			foreach ( $this->default_post_capabilities as $capability ) {
+				if (
+					isset( $post_type->cap->$capability )
+					&& ! in_array( $post_type->cap->$capability, $capabilities_list, true )
+				) {
+					$capabilities_list[] = $post_type->cap->$capability;
+				}
+			}
+		}
+
+		return $capabilities_list;
 	}
 
 }

@@ -27,7 +27,7 @@ class Access_Ajax_Handler_Change_Role_Caps_Process extends Toolset_Ajax_Handler_
 
 		$this->ajax_begin( array( 'nonce' => 'wpcf-access-error-pages' ) );
 		$access_settings = \OTGS\Toolset\Access\Models\Settings::get_instance();
-		$access_roles_class = \OTGS\Toolset\Access\Models\UserRoles::get_instance();
+		$capabilities_model = \OTGS\Toolset\Access\Models\Capabilities::get_instance();
 		$role = sanitize_text_field( $_POST['role'] );
 		$caps = '';
 		if ( isset( $_POST['caps'] ) ) {
@@ -36,7 +36,7 @@ class Access_Ajax_Handler_Change_Role_Caps_Process extends Toolset_Ajax_Handler_
 
 		$access_roles = $access_settings->getAccessRoles();
 
-		$all_capabilities = $access_roles_class->get_roles_capabilities_list( array() );
+		$all_capabilities = $capabilities_model->get_list();
 		$role_data = get_role( $role );
 
 		for ( $i = 0, $caps_limit = count( $all_capabilities ); $i < $caps_limit; $i ++ ) {

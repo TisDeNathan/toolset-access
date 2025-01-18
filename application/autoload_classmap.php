@@ -44,6 +44,7 @@ return array(
     'OTGS\\Toolset\\Access\\Models\\Settings' => $baseDir . '/application/models/access_settings.php',
     'OTGS\\Toolset\\Access\\Models\\UserRoles' => $baseDir . '/application/models/user_roles.php',
     'OTGS\\Toolset\\Access\\Models\\WPMLSettings' => $baseDir . '/application/models/wpml_settings.php',
+    'OTGS\\Toolset\\Access\\Utils' => $baseDir . '/application/Utils.php',
     'OTGS\\Toolset\\Access\\Viewmodels\\PermissionsGui' => $baseDir . '/application/viewmodels/permissions_gui.php',
     'OTGS\\Toolset\\Access\\Viewmodels\\PermissionsTablesCustomRoles' => $baseDir . '/application/viewmodels/permissions_table_custom_roles.php',
     'OTGS\\Toolset\\Access\\Viewmodels\\PermissionsTablesPostGroups' => $baseDir . '/application/viewmodels/permissions_table_post_groups.php',

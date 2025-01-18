@@ -55,7 +55,7 @@ class RelationshipDefinitionTranslationPackage extends TranslationPackage {
 	 * @return string
 	 */
 	public function get_package_kind() {
-		return __( 'Toolset Types', 'wpv-views' );
+		return 'Toolset Types';
 	}
 
 

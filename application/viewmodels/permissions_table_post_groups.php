@@ -3,10 +3,7 @@
 namespace OTGS\Toolset\Access\Viewmodels;
 
 use OTGS\Toolset\Access\Controllers\AccessOutputTemplateRepository;
-use OTGS\Toolset\Access\Models\Capabilities;
-use OTGS\Toolset\Access\Models\GuiCommon;
 use OTGS\Toolset\Access\Models\Settings;
-use OTGS\Toolset\Access\Models\UserRoles;
 
 /**
  * Generate Access permission tables

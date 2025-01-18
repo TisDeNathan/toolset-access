@@ -2,7 +2,6 @@
 
 namespace OTGS\Toolset\Access\Controllers;
 
-use OTGS\Toolset\Access\Models\Capabilities;
 use OTGS\Toolset\Access\Models\Settings;
 use OTGS\Toolset\Access\Models\UserRoles;
 use OTGS\Toolset\Access\Models\WPMLSettings;

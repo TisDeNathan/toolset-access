@@ -27,7 +27,7 @@ class Access_Ajax_Handler_Change_Role_Caps_Form extends Toolset_Ajax_Handler_Abs
 
 		$this->ajax_begin( array( 'nonce' => 'wpcf-access-error-pages' ) );
 
-		$access_roles = \OTGS\Toolset\Access\Models\UserRoles::get_instance();
+		$capabilities_model = \OTGS\Toolset\Access\Models\Capabilities::get_instance();
 		$role = sanitize_text_field( $_POST['role'] );
 		$out = '<div class="otg-access-change-role-caps-tabs js-otg-access-change-role-caps-tabs">';
 		$role_data = get_role( $role );
@@ -160,7 +160,7 @@ class Access_Ajax_Handler_Change_Role_Caps_Form extends Toolset_Ajax_Handler_Abs
 
 		//Add Access role capability from list
 		$managed_capabilities_list[] = 'wpcf_access_role';
-		$other_roles_capabilities = $access_roles->get_roles_capabilities_list( $managed_capabilities_list );
+		$other_roles_capabilities = $capabilities_model->get_list( $managed_capabilities_list );
 		if ( count( $other_roles_capabilities ) ) {
 			asort( $other_roles_capabilities );
 			$out .= sprintf( '<li><a href="#plugin_%s">%s</a></li>', md5( __( 'Other capabilities', 'wpcf-access' ) ), __( 'Other capabilities', 'wpcf-access' ) );

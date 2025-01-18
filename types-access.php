@@ -5,12 +5,12 @@ Plugin URI: http://toolset.com/home/types-access/?utm_source=accessplugin&utm_ca
 Description: User access control and roles management
 Author: OnTheGoSystems
 Author URI: http://www.onthegosystems.com/
-Version: 2.8.17
+Version: 2.9.2
  */
 
 
 if ( ! defined( 'TACCESS_VERSION' ) ) {
-	define( 'TACCESS_VERSION', '2.8.17' );
+	define( 'TACCESS_VERSION', '2.9.2' );
 }
 
 if ( ! defined( 'TACCESS_PLUGIN_PATH' ) ) {
